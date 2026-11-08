@@ -1,0 +1,8 @@
+build/
+dist/
+.vscode/
+*.o
+*.obj
+*.dll
+*.so
+Resources/addon/

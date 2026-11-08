@@ -1,0 +1,26 @@
+name: addon
+
+# Empaquette l'addon data-driven (BP + RP) : blocs, manifestes, terrain_texture.
+# Ne necessite ni le SDK LeviLamina ni les ressources originales pour la partie
+# structurelle (les textures sont copiees localement via assemble_addon.py).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generer la structure de l'addon
+        run: python3 Tools/generate_data.py --out Resources
+
+      - name: Empaqueter
+        run: python3 Tools/package.py --out dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CreateLeviLamina-addon
+          path: dist/
