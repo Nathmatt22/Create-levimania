@@ -7,6 +7,11 @@
 //
 // Les blocs cinematiques reutilisent l'addon data-driven (Resources/addon) :
 // leur identifiant "create:xxx" est mappe vers un KineticType par Platform.cpp.
+//
+// Evenerements utilises (SDK LeviLamina) :
+//   * PlayerPlacedBlockEvent  : un bloc vient d'etre pose par un joueur.
+//   * PlayerDestroyBlockEvent : un bloc vient d'etre casse par un joueur.
+// Les classes d'evenements ecoutables sont obligatoirement final.
 #include "CreateLeviLaminaMod.h"
 
 #if defined(_WIN32)
@@ -19,6 +24,9 @@
 #include "ll/api/event/player/PlayerDestroyBlockEvent.h"
 #include "ll/api/mod/RegisterHelper.h"
 
+#include "mc/world/level/BlockPos.h"
+#include "mc/world/level/block/Block.h"
+
 #include <memory>
 
 namespace cl::platform::windows {
@@ -27,6 +35,11 @@ namespace {
 
 std::unique_ptr<KineticBridge> gBridge;
 std::unique_ptr<WindowsPlatform> gPlatform;
+
+// Convertit une position Minecraft en position du noyau.
+kinetic::BlockPos toKernel(::BlockPos const& pos) {
+    return kinetic::BlockPos{pos.x, pos.y, pos.z};
+}
 
 } // namespace
 
@@ -49,22 +62,23 @@ bool CreateLeviLaminaMod::enable() {
     auto& bus = ll::event::EventBus::getInstance();
 
     // Pose de bloc : si c'est un composant cinematique, on l'ajoute au graphe.
-    bus.emplaceListener<ll::event::PlayerPlaceBlockEvent>(
-        [&logger](ll::event::PlayerPlaceBlockEvent& ev) {
-            // TODO(levilamina): extraire la position et l'identifiant du bloc
-            // depuis l'evenement selon la version exacte du SDK.
-            //   auto pos = ev.pos();               // -> kinetic::BlockPos
-            //   auto id  = ev.block().getTypeName(); // "create:shaft"
-            //   gBridge->onBlockPlaced(pos, id, 0, axisFrom(ev));
-            (void)logger;
+    bus.emplaceListener<ll::event::PlayerPlacedBlockEvent>(
+        [&logger](ll::event::PlayerPlacedBlockEvent& ev) {
+            auto blockId = ev.placedBlock().getTypeName();
+            if (!gBridge) {
+                return;
+            }
+            gBridge->onBlockPlaced(toKernel(ev.pos()), blockId, 0, kinetic::Axis::X);
+            logger.debug("Bloc pose: {}", blockId);
         });
 
     // Destruction de bloc.
     bus.emplaceListener<ll::event::PlayerDestroyBlockEvent>(
-        [&logger](ll::event::PlayerDestroyBlockEvent& ev) {
-            // TODO(levilamina): extraire la position et appeler onBlockRemoved.
-            //   gBridge->onBlockRemoved(ev.pos());
-            (void)logger;
+        [](ll::event::PlayerDestroyBlockEvent& ev) {
+            if (!gBridge) {
+                return;
+            }
+            gBridge->onBlockRemoved(toKernel(ev.pos()));
         });
 
     logger.info("CreateLeviLamina active.");
@@ -79,7 +93,7 @@ bool CreateLeviLaminaMod::disable() {
 }
 
 // Enregistrement aupres de LeviLamina (macro standard du SDK).
-LL_REGISTER_MOD(CreateLeviLaminaMod, CreateLeviLaminaMod::getInstance());
+LL_REGISTER_MOD(cl::platform::windows::CreateLeviLaminaMod, cl::platform::windows::CreateLeviLaminaMod::getInstance());
 
 } // namespace cl::platform::windows
 

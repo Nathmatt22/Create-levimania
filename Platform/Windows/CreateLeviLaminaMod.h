@@ -2,37 +2,37 @@
 //
 // CreateLeviLamina - Platform/Windows/CreateLeviLaminaMod.h
 //
-// Classe de mod LeviLamina (Windows). Suit la structure du template officiel :
-// load() pour l'initialisation hors-jeu, enable() pour les abonnements aux
-// evenements et l'enregistrement des commandes.
-//
-// Voir https://docs.levimc.org/LeviLamina/developer_guides/tutorials/create_your_first_mod/
+// Classe de mod LeviLamina (Windows), calquee sur le template officiel :
+//   https://github.com/LiteLDev/levilamina-mod-template
+// load()  : initialisation hors-jeu (config, logs).
+// enable(): abonnements aux evenements et enregistrement des commandes.
 #pragma once
 
 #if defined(_WIN32)
 
-#include "ll/api/mod/Mod.h"
+#include "ll/api/mod/NativeMod.h"
 
 namespace cl::platform::windows {
 
 class CreateLeviLaminaMod {
 public:
-    // Initialisation hors-jeu (config, logs). Appelee au chargement du mod.
+    static CreateLeviLaminaMod& getInstance();
+
+    CreateLeviLaminaMod() : mSelf(*ll::mod::NativeMod::current()) {}
+
+    [[nodiscard]] ll::mod::NativeMod& getSelf() const { return mSelf; }
+
+    // Initialisation hors-jeu. Appelee au chargement du mod.
     bool load();
 
-    // Abonnements aux evenements (pose/destruction de blocs, clic sur moteur).
+    // Abonnements aux evenements (pose/destruction de blocs).
     bool enable();
 
     // Nettoyage.
     bool disable();
 
-    // Acces a l'instance unique (utilisee par LL_REGISTER_MOD).
-    static CreateLeviLaminaMod& getInstance();
-
-    ll::mod::Mod& getSelf() { return *mSelf; }
-
 private:
-    ll::mod::Mod* mSelf = nullptr;
+    ll::mod::NativeMod& mSelf;
 };
 
 } // namespace cl::platform::windows
